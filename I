@@ -1,0 +1,178 @@
+Public Class Form1
+    Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        ' Set background image
+        Me.BackgroundImage = Image.FromFile("path_to_your_background_image.jpg")
+        Me.BackgroundImageLayout = ImageLayout.Stretch
+    End Sub
+
+    Private Sub btnLogin_Click(sender As Object, e As EventArgs) Handles btnLogin.Click
+        ' Open the Login Form (Form2)
+        Dim loginForm As New Form2()
+        loginForm.Show()
+        Me.Hide()
+    End Sub
+
+    Private Sub btnSignUp_Click(sender As Object, e As EventArgs) Handles btnSignUp.Click
+        ' Open the Sign-Up Form (Form3)
+        Dim signUpForm As New Form3()
+        signUpForm.Show()
+        Me.Hide()
+    End Sub
+End Class
+Public Class Form2
+    Private Sub Form2_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        ' Set background image
+        Me.BackgroundImage = Image.FromFile("path_to_your_background_image.jpg")
+        Me.BackgroundImageLayout = ImageLayout.Stretch
+    End Sub
+
+    Private Sub btnLogin_Click(sender As Object, e As EventArgs) Handles btnLogin.Click
+        Dim userName As String = txtLoginName.Text
+        Dim userEmail As String = txtLoginEmail.Text
+
+        If userName = "" OrElse userEmail = "" Then
+            MessageBox.Show("Please enter both name and email.")
+            Return
+        End If
+
+        ' Check if user has an existing booking
+        If Form4.userBookings.ContainsKey(userEmail) Then
+            ' Open Account Management Form (Form4) with existing booking details
+            Dim accountForm As New Form4(userName, userEmail)
+            accountForm.Show()
+            Me.Hide()
+        Else
+            MessageBox.Show("No existing booking found.")
+        End If
+    End Sub
+End Class
+Public Class Form3
+    Private Sub Form3_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        ' Set background image
+        Me.BackgroundImage = Image.FromFile("path_to_your_background_image.jpg")
+        Me.BackgroundImageLayout = ImageLayout.Stretch
+    End Sub
+
+    Private Sub btnSignUp_Click(sender As Object, e As EventArgs) Handles btnSignUp.Click
+        Dim userName As String = txtName.Text
+        Dim userEmail As String = txtEmail.Text
+        Dim userAddress As String = txtAddress.Text
+        Dim userDOB As DateTime = dtpDOB.Value
+
+        If userName = "" OrElse userEmail = "" OrElse userAddress = "" Then
+            MessageBox.Show("Please fill in all details.")
+            Return
+        End If
+
+        ' Save new user details in the in-memory storage
+        Form4.userBookings(userEmail) = (userName, userEmail, userDOB, "")
+
+        ' Redirect to the Account Management Form (Form4)
+        Dim accountForm As New Form4(userName, userEmail)
+        accountForm.Show()
+        Me.Hide()
+    End Sub
+End Class
+Public Class Form4
+    ' Simulate in-memory storage for user bookings
+    Public Shared userBookings As New Dictionary(Of String, (String, String, DateTime, String))()
+    Private userName As String
+    Private userEmail As String
+
+    Public Sub New(name As String, email As String)
+        InitializeComponent()
+        userName = name
+        userEmail = email
+    End Sub
+
+    Private Sub Form4_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        ' Set background image
+        Me.BackgroundImage = Image.FromFile("path_to_your_background_image.jpg")
+        Me.BackgroundImageLayout = ImageLayout.Stretch
+
+        ' Display current booking if it exists
+        If userBookings.ContainsKey(userEmail) Then
+            Dim booking = userBookings(userEmail)
+            lblBookingDetails.Text = $"Current Booking for {userName}:" & Environment.NewLine &
+                                     $"Date: {booking.Item3.ToShortDateString()}, Time Slot: {booking.Item4}"
+        Else
+            lblBookingDetails.Text = "No current booking found."
+        End If
+    End Sub
+
+    Private Sub btnEditBooking_Click(sender As Object, e As EventArgs) Handles btnEditBooking.Click
+        ' Show calendar and radio buttons for editing
+        monthCalendar.Visible = True
+        rbMorning.Visible = True
+        rbAfternoon.Visible = True
+        rbNight.Visible = True
+        btnConfirmEdit.Visible = True
+    End Sub
+
+    Private Sub btnConfirmEdit_Click(sender As Object, e As EventArgs) Handles btnConfirmEdit.Click
+        ' Check if a time slot is selected
+        If Not (rbMorning.Checked Or rbAfternoon.Checked Or rbNight.Checked) Then
+            MessageBox.Show("Please select a time slot.")
+            Return
+        End If
+
+        ' Get selected date and time slot
+        Dim selectedDate As DateTime = monthCalendar.SelectionRange.Start
+        Dim timeSlot As String = If(rbMorning.Checked, "Morning (8:00 AM - 10:00 AM)",
+                                    If(rbAfternoon.Checked, "Afternoon (1:00 PM - 3:00 PM)", "Night (6:00 PM - 8:00 PM)"))
+
+        ' Update booking details
+        userBookings(userEmail) = (userName, userEmail, selectedDate, timeSlot)
+
+        ' Show confirmation form
+        Dim form5 As New Form5("Booking Edited")
+        form5.Show()
+        Me.Hide()
+    End Sub
+
+    Private Sub btnCancelBooking_Click(sender As Object, e As EventArgs) Handles btnCancelBooking.Click
+        ' Remove booking from storage
+        If userBookings.ContainsKey(userEmail) Then
+            userBookings.Remove(userEmail)
+            MessageBox.Show("Booking has been canceled.")
+            ' Show confirmation form
+            Dim form5 As New Form5("Booking Canceled")
+            form5.Show()
+            Me.Hide()
+        Else
+            MessageBox.Show("No booking to cancel.")
+        End If
+    End Sub
+End Class
+Public Class Form5
+    Private confirmationMessage As String
+
+    Public Sub New(message As String)
+        InitializeComponent()
+        confirmationMessage = message
+    End Sub
+
+    Private Sub Form5_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        ' Set background image
+        Me.BackgroundImage = Image.FromFile("path_to_your_background_image.jpg")
+        Me.BackgroundImageLayout = ImageLayout.Stretch
+
+        ' Display confirmation message
+        lblConfirmation.Text = confirmationMessage
+
+        ' Set up PictureBox for GIF
+        pbGif.Image = Image.FromFile("path_to_your_gif.gif")
+        pbGif.SizeMode = PictureBoxSizeMode.StretchImage
+        pbGif.Location = New Point(100, 100) ' Adjust location as needed
+        pbGif.Size = New Size(200, 200) ' Adjust size as needed
+    End Sub
+
+    Private Sub btnClose_Click(sender As Object, e As EventArgs) Handles btnClose.Click
+        ' Close the application or return to the main form
+        Application.Exit()
+    End Sub
+End Class
+
+
+
+
