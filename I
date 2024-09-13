@@ -1,178 +1,170 @@
+Imports System.IO
+
 Public Class Form1
+    ' Define the file path
+    Private filePath As String = "C:\YourChosenPath\userBookings.txt"
+
+    ' Load Form1 and create the file if it doesn't exist
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        ' Set background image
-        Me.BackgroundImage = Image.FromFile("path_to_your_background_image.jpg")
-        Me.BackgroundImageLayout = ImageLayout.Stretch
+        If Not File.Exists(filePath) Then
+            ' Create the file if it doesn't exist
+            File.Create(filePath).Dispose()
+        End If
     End Sub
 
+    ' Directs to the Login form
     Private Sub btnLogin_Click(sender As Object, e As EventArgs) Handles btnLogin.Click
-        ' Open the Login Form (Form2)
-        Dim loginForm As New Form2()
+        Dim loginForm As New LoginForm()
+        loginForm.filePath = filePath ' Pass the file path to the login form
         loginForm.Show()
         Me.Hide()
     End Sub
 
+    ' Directs to the Sign-Up form
     Private Sub btnSignUp_Click(sender As Object, e As EventArgs) Handles btnSignUp.Click
-        ' Open the Sign-Up Form (Form3)
-        Dim signUpForm As New Form3()
+        Dim signUpForm As New SignUpForm()
+        signUpForm.filePath = filePath ' Pass the file path to the sign-up form
         signUpForm.Show()
         Me.Hide()
     End Sub
-End Class
-Public Class Form2
-    Private Sub Form2_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        ' Set background image
-        Me.BackgroundImage = Image.FromFile("path_to_your_background_image.jpg")
-        Me.BackgroundImageLayout = ImageLayout.Stretch
-    End Sub
 
-    Private Sub btnLogin_Click(sender As Object, e As EventArgs) Handles btnLogin.Click
-        Dim userName As String = txtLoginName.Text
-        Dim userEmail As String = txtLoginEmail.Text
-
-        If userName = "" OrElse userEmail = "" Then
-            MessageBox.Show("Please enter both name and email.")
-            Return
-        End If
-
-        ' Check if user has an existing booking
-        If Form4.userBookings.ContainsKey(userEmail) Then
-            ' Open Account Management Form (Form4) with existing booking details
-            Dim accountForm As New Form4(userName, userEmail)
-            accountForm.Show()
-            Me.Hide()
-        Else
-            MessageBox.Show("No existing booking found.")
+    ' Handle closing the application and deleting the file
+    Private Sub Form1_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
+        ' Delete the file when the application closes
+        If File.Exists(filePath) Then
+            File.Delete(filePath)
         End If
     End Sub
 End Class
-Public Class Form3
-    Private Sub Form3_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        ' Set background image
-        Me.BackgroundImage = Image.FromFile("path_to_your_background_image.jpg")
-        Me.BackgroundImageLayout = ImageLayout.Stretch
-    End Sub
+Imports System.IO
 
+Public Class SignUpForm
+    Public filePath As String
+
+    ' Handles sign-up process
     Private Sub btnSignUp_Click(sender As Object, e As EventArgs) Handles btnSignUp.Click
-        Dim userName As String = txtName.Text
-        Dim userEmail As String = txtEmail.Text
-        Dim userAddress As String = txtAddress.Text
-        Dim userDOB As DateTime = dtpDOB.Value
+        ' Get user details from input fields
+        Dim name As String = txtName.Text
+        Dim email As String = txtEmail.Text
+        Dim address As String = txtAddress.Text
+        Dim dob As String = txtDOB.Text
 
-        If userName = "" OrElse userEmail = "" OrElse userAddress = "" Then
-            MessageBox.Show("Please fill in all details.")
-            Return
-        End If
+        ' Prepare the user data string
+        Dim userData As String = $"{name},{email},{address},{dob},," ' Booking date and time will be added later
 
-        ' Save new user details in the in-memory storage
-        Form4.userBookings(userEmail) = (userName, userEmail, userDOB, "")
+        ' Write the user data to the file
+        Using writer As New StreamWriter(filePath, True)
+            writer.WriteLine(userData)
+        End Using
 
-        ' Redirect to the Account Management Form (Form4)
-        Dim accountForm As New Form4(userName, userEmail)
-        accountForm.Show()
+        MessageBox.Show("Sign-up successful!")
         Me.Hide()
+        Form1.Show()
     End Sub
 End Class
-Public Class Form4
-    ' Simulate in-memory storage for user bookings
-    Public Shared userBookings As New Dictionary(Of String, (String, String, DateTime, String))()
-    Private userName As String
-    Private userEmail As String
+Imports System.IO
 
-    Public Sub New(name As String, email As String)
-        InitializeComponent()
-        userName = name
-        userEmail = email
-    End Sub
+Public Class LoginForm
+    Public filePath As String
 
-    Private Sub Form4_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        ' Set background image
-        Me.BackgroundImage = Image.FromFile("path_to_your_background_image.jpg")
-        Me.BackgroundImageLayout = ImageLayout.Stretch
+    ' Handles login process
+    Private Sub btnLogin_Click(sender As Object, e As EventArgs) Handles btnLogin.Click
+        Dim email As String = txtEmail.Text
+        Dim userFound As Boolean = False
 
-        ' Display current booking if it exists
-        If userBookings.ContainsKey(userEmail) Then
-            Dim booking = userBookings(userEmail)
-            lblBookingDetails.Text = $"Current Booking for {userName}:" & Environment.NewLine &
-                                     $"Date: {booking.Item3.ToShortDateString()}, Time Slot: {booking.Item4}"
-        Else
-            lblBookingDetails.Text = "No current booking found."
+        ' Read the file and search for the user by email
+        Using reader As New StreamReader(filePath)
+            While Not reader.EndOfStream
+                Dim line As String = reader.ReadLine()
+                Dim userDetails As String() = line.Split(",")
+
+                If userDetails(1) = email Then ' Check if the email matches
+                    MessageBox.Show($"Welcome {userDetails(0)}! Your booking is on {userDetails(4)} at {userDetails(5)}.")
+                    userFound = True
+
+                    ' Open the BookingForm and pass the user details
+                    Dim bookingForm As New BookingForm(userDetails)
+                    bookingForm.filePath = filePath
+                    bookingForm.Show()
+                    Me.Hide()
+                    Exit While
+                End If
+            End While
+        End Using
+
+        If Not userFound Then
+            MessageBox.Show("No existing login found for this email.")
         End If
     End Sub
+End Class
+Imports System.IO
 
+Public Class BookingForm
+    Public filePath As String
+    Private userDetails As String()
+
+    ' Constructor that accepts the logged-in user details
+    Public Sub New(details As String())
+        InitializeComponent()
+        userDetails = details
+
+        ' Display current booking information
+        lblBookingDate.Text = "Booking Date: " & userDetails(4)
+        lblBookingTime.Text = "Booking Time: " & userDetails(5)
+    End Sub
+
+    ' Handles booking edit
     Private Sub btnEditBooking_Click(sender As Object, e As EventArgs) Handles btnEditBooking.Click
-        ' Show calendar and radio buttons for editing
-        monthCalendar.Visible = True
-        rbMorning.Visible = True
-        rbAfternoon.Visible = True
-        rbNight.Visible = True
-        btnConfirmEdit.Visible = True
+        ' Get new booking details
+        Dim newBookingDate As String = datePicker.Value.ToString("yyyy-MM-dd")
+        Dim newBookingTime As String = cmbTimeSlot.SelectedItem.ToString()
+
+        ' Update the user details array
+        userDetails(4) = newBookingDate
+        userDetails(5) = newBookingTime
+
+        ' Update the file with the new booking details
+        UpdateFile()
+
+        MessageBox.Show("Booking updated!")
     End Sub
 
-    Private Sub btnConfirmEdit_Click(sender As Object, e As EventArgs) Handles btnConfirmEdit.Click
-        ' Check if a time slot is selected
-        If Not (rbMorning.Checked Or rbAfternoon.Checked Or rbNight.Checked) Then
-            MessageBox.Show("Please select a time slot.")
-            Return
-        End If
-
-        ' Get selected date and time slot
-        Dim selectedDate As DateTime = monthCalendar.SelectionRange.Start
-        Dim timeSlot As String = If(rbMorning.Checked, "Morning (8:00 AM - 10:00 AM)",
-                                    If(rbAfternoon.Checked, "Afternoon (1:00 PM - 3:00 PM)", "Night (6:00 PM - 8:00 PM)"))
-
-        ' Update booking details
-        userBookings(userEmail) = (userName, userEmail, selectedDate, timeSlot)
-
-        ' Show confirmation form
-        Dim form5 As New Form5("Booking Edited")
-        form5.Show()
-        Me.Hide()
-    End Sub
-
+    ' Handles booking cancellation
     Private Sub btnCancelBooking_Click(sender As Object, e As EventArgs) Handles btnCancelBooking.Click
-        ' Remove booking from storage
-        If userBookings.ContainsKey(userEmail) Then
-            userBookings.Remove(userEmail)
-            MessageBox.Show("Booking has been canceled.")
-            ' Show confirmation form
-            Dim form5 As New Form5("Booking Canceled")
-            form5.Show()
-            Me.Hide()
-        Else
-            MessageBox.Show("No booking to cancel.")
-        End If
+        ' Clear booking details
+        userDetails(4) = ""
+        userDetails(5) = ""
+
+        ' Update the file
+        UpdateFile()
+
+        MessageBox.Show("Booking canceled!")
+    End Sub
+
+    ' Updates the file with the current user details
+    Private Sub UpdateFile()
+        ' Read all lines from the file
+        Dim allLines As List(Of String) = File.ReadAllLines(filePath).ToList()
+
+        ' Find and update the user's line
+        For i As Integer = 0 To allLines.Count - 1
+            Dim line As String = allLines(i)
+            Dim details As String() = line.Split(",")
+
+            If details(1) = userDetails(1) Then ' Match by email
+                ' Update the line with new details
+                allLines(i) = String.Join(",", userDetails)
+                Exit For
+            End If
+        Next
+
+        ' Write the updated lines back to the file
+        File.WriteAllLines(filePath, allLines)
     End Sub
 End Class
-Public Class Form5
-    Private confirmationMessage As String
-
-    Public Sub New(message As String)
-        InitializeComponent()
-        confirmationMessage = message
-    End Sub
-
-    Private Sub Form5_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        ' Set background image
-        Me.BackgroundImage = Image.FromFile("path_to_your_background_image.jpg")
-        Me.BackgroundImageLayout = ImageLayout.Stretch
-
-        ' Display confirmation message
-        lblConfirmation.Text = confirmationMessage
-
-        ' Set up PictureBox for GIF
-        pbGif.Image = Image.FromFile("path_to_your_gif.gif")
-        pbGif.SizeMode = PictureBoxSizeMode.StretchImage
-        pbGif.Location = New Point(100, 100) ' Adjust location as needed
-        pbGif.Size = New Size(200, 200) ' Adjust size as needed
-    End Sub
-
-    Private Sub btnClose_Click(sender As Object, e As EventArgs) Handles btnClose.Click
-        ' Close the application or return to the main form
-        Application.Exit()
-    End Sub
-End Class
-
-
-
-
+Private Sub Form1_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
+    ' Delete the file when the application closes
+    If File.Exists(filePath) Then
+        File.Delete(filePath)
+    End If
+End Sub
